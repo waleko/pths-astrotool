@@ -9,6 +9,7 @@ import javafx.fxml.Initializable
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressBar
+import javafx.scene.image.Image
 import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.AnchorPane
@@ -77,9 +78,10 @@ class Controller : Initializable {
                 progressBar.progress = 0.0
                 lines = IsolineContainer(gf)
                 // TODO load picture
+                renderer.add(Image(ocadFile.toURL().toString()).toWrapper(Coordinate(0.0, 0.0)))
                 val envelope = lines.envelope
                 statusText.text = "Added ${lines.size} isolines. Bounding box: minX=${envelope.minX}, minY=${envelope.minY}, maxX=${envelope.maxX}, maxY=${envelope.maxY}"
-                redraw()
+//                redraw()
                 renderer.fit()
                 render()
             } catch (e: FileNotFoundException) {

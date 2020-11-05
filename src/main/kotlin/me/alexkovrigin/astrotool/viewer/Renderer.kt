@@ -1,6 +1,7 @@
 package me.alexkovrigin.astrotool.viewer
 
 import javafx.scene.canvas.GraphicsContext
+import javafx.scene.image.Image
 import javafx.scene.paint.Color
 import org.locationtech.jts.geom.*
 import java.lang.Double.min
@@ -107,11 +108,24 @@ class Renderer {
         val correctionScale = min(canvasWidth, canvasHeight)
         val correctionShift = Coordinate(canvasWidth * 0.5, canvasHeight * 0.5)
         for (wrapper in geoWrappers) {
+            wrapper.image?.let { renderImage(it, graphicsContext, wrapper.geometry.envelopeInternal, correctionShift, correctionScale, canvasHeight) }
             val geometry = wrapper.geometry
             val width = wrapper.width
             val color = wrapper.color
             renderGeometry(geometry, graphicsContext, width, color, correctionShift, correctionScale, canvasHeight)
         }
+    }
+
+    private fun renderImage(image: Image, graphicsContext: GraphicsContext, envelope: Envelope,
+                            correctionShift: Coordinate, correctionScale: Double, canvasHeight: Double) {
+        val pos1 = envelope.run { Coordinate(minX, minY) }
+        val pos3 = envelope.run { Coordinate(maxX, maxY) }
+        val pos2 = envelope.run { Coordinate(minX, maxY) }
+        correctionTransform(pos1, correctionShift, correctionScale)
+        correctionTransform(pos3, correctionShift, correctionScale)
+        correctionTransform(pos2, correctionShift, correctionScale)
+        val newImage = Image(image.url, (pos3.x - pos1.x), (pos3.y - pos1.y), false, false)
+        graphicsContext.drawImage(newImage, pos2.x, canvasHeight - pos2.y)
     }
 
     private fun renderGeometry(geometry: Geometry, graphicsContext: GraphicsContext, width: Double, color: Color,
