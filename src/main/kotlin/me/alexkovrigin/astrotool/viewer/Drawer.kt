@@ -5,12 +5,9 @@ import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.LineString
-import ru.kotlin.ogps.ocad.parser.isolines.IIsoline
-import ru.kotlin.ogps.ocad.parser.isolines.IsolineContainer
-import ru.kotlin.ogps.ocad.parser.utils.Constants
-import ru.kotlin.ogps.ocad.parser.utils.Constants.DEFAULT_ROAD_SYMBOLS
-import ru.kotlin.ogps.ocad.parser.utils.Constants.DEFAULT_STOP_SYMBOLS
-import ru.kotlin.ogps.ocad.parser.utils.LineStringInterpolatedPointIterator
+import me.alexkovrigin.astrotool.isolines.IIsoline
+import me.alexkovrigin.astrotool.isolines.IsolineContainer
+import me.alexkovrigin.astrotool.utils.Constants
 import java.util.*
 
 class Drawer(var gf: GeometryFactory) {
@@ -25,10 +22,6 @@ class Drawer(var gf: GeometryFactory) {
         for (line in isolines) {
 
             val isGpxTrack = line.type in 290701..290702
-
-            // hide non-roads
-            if (!DEFAULT_ROAD_SYMBOLS.contains(line.type) && !DEFAULT_STOP_SYMBOLS.contains(line.type) && !isGpxTrack)
-                continue
 
             val ls = line.lineString
 
@@ -66,16 +59,6 @@ class Drawer(var gf: GeometryFactory) {
 
     fun draw(geometry: Geometry, color: Color, width: Int): GeometryWrapper {
         return GeometryWrapper(geometry, color, width.toDouble())
-    }
-
-    private fun interpolatedLine(ls: LineString, step: Double): LineString {
-        val it = LineStringInterpolatedPointIterator(ls, step, 0.0)
-        val coordsList = LinkedList<Coordinate>()
-        while (it.hasNext()) {
-            val c = it.next()
-            coordsList.add(c)
-        }
-        return gf.createLineString(coordsList.toTypedArray())
     }
 
     fun draw(line: IIsoline, color: Color, width: Double): List<GeometryWrapper> {

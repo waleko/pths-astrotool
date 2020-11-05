@@ -1,6 +1,5 @@
 package me.alexkovrigin.astrotool.viewer
 
-import io.jenetics.jpx.GPX
 import javafx.application.Platform
 import javafx.beans.InvalidationListener
 import javafx.concurrent.Task
@@ -17,37 +16,23 @@ import javafx.scene.layout.GridPane
 import javafx.scene.paint.Color
 import javafx.scene.text.Text
 import javafx.stage.FileChooser
+import me.alexkovrigin.astrotool.isolines.IsolineContainer
 import org.locationtech.jts.geom.*
-import org.locationtech.jts.geom.impl.CoordinateArraySequence
 import org.locationtech.jts.util.GeometricShapeFactory
-import me.alexkovrigin.astrotool.OcadParser
-import ru.kotlin.ogps.ocad.parser.binary.OcadVertex
-import ru.kotlin.ogps.ocad.parser.binary.TOcadObject
-import ru.kotlin.ogps.ocad.parser.corrector.*
-import ru.kotlin.ogps.ocad.parser.isolines.IIsoline
-import ru.kotlin.ogps.ocad.parser.isolines.Isoline
-import ru.kotlin.ogps.ocad.parser.isolines.IsolineContainer
-import ru.kotlin.ogps.ocad.parser.utils.Constants.DEFAULT_ROAD_SYMBOLS
-import ru.kotlin.ogps.ocad.parser.utils.GeographyUtils
-import ru.kotlin.ogps.ocad.parser.utils.GeomUtils.rotateCoordinate
 import java.io.*
-import java.lang.AssertionError
 import java.net.URL
 import java.util.*
-import kotlin.math.PI
 import kotlin.math.pow
 
 class Controller : Initializable {
 
     private val gf = GeometryFactory()
     var lines = IsolineContainer(gf)
-    private var ocadParser: OcadParser = OcadParser()
     var border: LinearRing? = null
     private val renderer = Renderer()
     private var drawer = Drawer(gf)
     private var mousePosition = Coordinate(0.0, 0.0)
     private var lastOpenedDir: File = File(".")
-    private var coordinateCorrector = CoordinateCorrector(lines, gf)
 
     @FXML
     lateinit var gridPane: GridPane
@@ -66,20 +51,6 @@ class Controller : Initializable {
 
     @FXML
     lateinit var infoLabel: Label
-
-    private fun getLineRingForBorder(obj: TOcadObject, gf: GeometryFactory): LinearRing? {
-        val vertices: ArrayList<OcadVertex> = obj.vertices
-        if (vertices.isNotEmpty()) {
-            val firstVertex: OcadVertex = vertices[0]
-            val lastVertex: OcadVertex = vertices[vertices.size - 1]
-            if (firstVertex != lastVertex) {
-                vertices.add(firstVertex)
-            }
-            val coordinates: Array<Coordinate> = vertices.toArray(arrayOfNulls<OcadVertex>(vertices.size))
-            return gf.createLinearRing(coordinates)
-        }
-        return null
-    }
 
     private fun redraw() {
         val geometry: List<GeometryWrapper> = drawer.draw(lines)
@@ -105,18 +76,7 @@ class Controller : Initializable {
             try {
                 progressBar.progress = 0.0
                 lines = IsolineContainer(gf)
-                ocadParser.loadOcad(ocadFile) { done: Int, max: Int ->
-                    progressBar.progress = done.toDouble() / max
-                }
-                val isolines: ArrayList<IIsoline> = ocadParser.linesAsIsolines(gf)
-                lines.clear()
-                lines.addAll(isolines)
-                coordinateCorrector = CoordinateCorrector(lines, gf)
-
-                // TODO: remove
-                showTracks()
-
-                border = ocadParser.border?.let { getLineRingForBorder(it, gf) }
+                // TODO load picture
                 val envelope = lines.envelope
                 statusText.text = "Added ${lines.size} isolines. Bounding box: minX=${envelope.minX}, minY=${envelope.minY}, maxX=${envelope.maxX}, maxY=${envelope.maxY}"
                 redraw()
@@ -127,43 +87,6 @@ class Controller : Initializable {
             } catch (e: Exception) {
                 statusText.text = "File load error: " + e.message
                 println(e)
-            }
-        }
-    }
-
-    private fun showTracks() {
-        val dir = "./sample-events/2017-02-18/gpx/"
-
-        val gpxs = File(dir)
-            .walkTopDown()
-            .filter { it.isFile && it.extension == "gpx" }
-            .map { GPX.read(it.toPath()) }
-            .toList()
-
-        // TODO: take forEach instead of first
-        gpxs.first().tracks.first().let { track ->
-            println("Now processing ${track.name}")
-
-            track.segments.first().let { segment ->
-                val absoluteCoords = segment.points.map {
-                    GeographyUtils.toUTM(it.latitude.toDegrees(), it.longitude.toDegrees())
-                }
-
-                val relativeCoords = absoluteCoords.map {
-                    // Get relative coordinates
-                    Coordinate(it.first - ocadParser.mapCoordinate.x, it.second - ocadParser.mapCoordinate.y)
-                }
-
-                val convertedCoords = relativeCoords.map {
-                    rotateCoordinate(it, ocadParser.mapAngle * PI / 180)
-                }
-
-                val correctedCoords = coordinateCorrector.correctAll(convertedCoords)
-                val correctedIsoline = Isoline(290701, CoordinateArraySequence(correctedCoords.toTypedArray()), gf)
-                val baseIsoline = Isoline(290702, CoordinateArraySequence(convertedCoords.toTypedArray()), gf)
-
-                lines.add(correctedIsoline)
-                lines.add(baseIsoline)
             }
         }
     }
@@ -189,12 +112,10 @@ class Controller : Initializable {
 
         if (lines.envelope.intersects(position)) {
             val td = 15.0
-            val closest = coordinateCorrector.correct(position, terminateDistance = td)
-            infoLabel.text += "; closest is (${closest.x}, ${closest.y})"
+            infoLabel.text += "; closest is (${position.x}, ${position.y})"
 
             redraw()
-            renderer.add(GeometryWrapper(createCircle(position, td), Color.GREEN, 1.0))
-            renderer.add(GeometryWrapper(createCircle(closest, td), Color.RED, 1.0))
+            renderer.add(GeometryWrapper(createCircle(position, td), Color.RED, 1.0))
             render()
         }
     }
