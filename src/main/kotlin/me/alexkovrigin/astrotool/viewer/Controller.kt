@@ -20,13 +20,16 @@ import javafx.stage.FileChooser
 import me.alexkovrigin.astrotool.isolines.IsolineContainer
 import me.alexkovrigin.astrotool.utils.AstronomyUtils
 import me.alexkovrigin.astrotool.utils.CameraParameters
+import me.alexkovrigin.astrotool.utils.StarCoordinate
 import org.locationtech.jts.geom.*
 import org.locationtech.jts.util.GeometricShapeFactory
-import java.io.*
+import java.io.File
+import java.io.FileNotFoundException
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
+import kotlin.math.min
 import kotlin.math.pow
 
 class Controller : Initializable {
@@ -39,6 +42,7 @@ class Controller : Initializable {
     private var mousePosition = Coordinate(0.0, 0.0)
     private var lastOpenedDir: File = File(".")
     private val geometryWrappers = mutableListOf<GeometryWrapper>()
+    private val geometryWrappers1 = mutableListOf<GeometryWrapper>()
     private var envelope: Envelope = Envelope(Coordinate(0.0, 0.0))
     private val imagesQueue: Queue<File> = LinkedList<File>()
 
@@ -61,7 +65,7 @@ class Controller : Initializable {
     lateinit var infoLabel: Label
 
     private fun redraw() {
-        val geometry: List<GeometryWrapper> = drawer.draw(lines) + geometryWrappers
+        val geometry: List<GeometryWrapper> = drawer.draw(lines) + geometryWrappers + geometryWrappers1
         renderer.clear()
         renderer.addAll(geometry)
         border?.let {
@@ -112,6 +116,8 @@ class Controller : Initializable {
         if (imageFile != null) {
             imagesQueue.clear()
             awaitingInput = false
+            geometryWrappers.clear()
+            geometryWrappers1.clear()
             lastOpenedDir = imageFile.parentFile
             processImage(imageFile)
         }
@@ -126,6 +132,8 @@ class Controller : Initializable {
         if (selection != null && selection.isNotEmpty()) {
             imagesQueue.clear()
             awaitingInput = false
+            geometryWrappers.clear()
+            geometryWrappers1.clear()
             selection.sortedBy { it.lastModified() }.forEach { processImage(imageFile = it) }
         }
     }
@@ -271,5 +279,41 @@ class Controller : Initializable {
         if (file != null) {
             cameraParameters = Gson().fromJson(file.readText(), CameraParameters::class.java)
         }
+    }
+
+    fun openCSVPodgon(actionEvent: ActionEvent) {
+        val fileChooser = FileChooser()
+        fileChooser.title = "Select csv values file"
+        fileChooser.initialDirectory = lastOpenedDir
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("CSV", "*.csv"))
+        val csvFile = fileChooser.showOpenDialog(null) ?: return
+        val coords = csvFile
+            .readText()
+            .split('\n')
+            .map { it.split(';') }
+            .filter { line -> line.size == 3 && line.all { it.isNotBlank() } }
+            .map {
+                val date = Instant.parse(it[0]).toEpochMilli()
+                val star = StarCoordinate(it[1].toDouble(), it[2].toDouble())
+                return@map date to star
+            }
+            .sortedBy { it.first }
+
+        val cnt = coords.size
+        geometryWrappers1.clear()
+        val minDate = coords.first().first
+        val maxDate = coords.last().first
+        coords.forEach { (date, star) ->
+            val coordinate = AstronomyUtils.starCoordinateToMouse(
+                star, geometryWrappers.first(), cameraParameters ?: error("No camera parameters")
+            )
+            val circle = createCircle(coordinate, radius = 30.0)
+            val color = Color.hsb(360.0 * (date - minDate) / (maxDate - minDate), 1.0, 1.0)
+            val gw = GeometryWrapper(circle, color, 2.0)
+            geometryWrappers1.add(gw)
+        }
+        redraw()
+        renderer.fit()
+        render()
     }
 }

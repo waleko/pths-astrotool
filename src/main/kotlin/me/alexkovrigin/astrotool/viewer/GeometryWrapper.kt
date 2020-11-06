@@ -19,13 +19,15 @@ data class GeometryWrapper(
 
 fun File.toWrapper(pos: Coordinate, gf: GeometryFactory = GeometryFactory()): GeometryWrapper {
     val image = Image(this.toURL().toString())
-    return GeometryWrapper(gf.createLinearRing(
-        arrayOf(
-            pos.copy(),
-            Coordinate(pos.x + image.width, pos.y),
-            Coordinate(pos.x + image.width, pos.y + image.height),
-            Coordinate(pos.x, pos.y + image.height),
-            pos.copy()
-        )
-    ), imageFile = this)
+    return GeometryWrapper(
+        gf.createLinearRing(
+            arrayOf(
+                pos.copy(),
+                Coordinate(pos.x + image.width, pos.y),
+                Coordinate(pos.x + image.width, pos.y + image.height),
+                Coordinate(pos.x, pos.y + image.height),
+                pos.copy()
+            )
+        ), imageFile = this
+    )
 }

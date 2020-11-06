@@ -4,7 +4,10 @@ import org.locationtech.jts.geom.*
 import org.locationtech.jts.math.Vector2D
 import org.locationtech.jts.operation.distance.DistanceOp
 import org.locationtech.jts.util.GeometricShapeFactory
-import kotlin.math.*
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Class, containing static 2D geometry functions
@@ -94,8 +97,10 @@ operator fun Vector2D.plus(v: Vector2D): Vector2D = add(v)
 operator fun Vector2D.minus(v: Vector2D): Vector2D = subtract(v)
 operator fun Vector2D.times(d: Double): Vector2D = multiply(d)
 operator fun Vector2D.div(d: Double): Vector2D = divide(d)
+
 /** Dot product*/
 operator fun Vector2D.times(v: Vector2D) = dot(v)
+
 /** (Pseudo) cross product**/
 fun Vector2D.cross(v: Vector2D) = x * v.y - v.x * y
 fun Vector2D.cosAngle(v: Vector2D) = normalize().dot(v.normalize())
@@ -118,13 +123,13 @@ fun Geometry.forEachSubGeometry(block: (subGeometry: Geometry) -> Unit) {
 fun MultiLineString.toLineStringList(): List<LineString> =
     (0 until numGeometries).map { getGeometryN(it) as LineString }
 
-fun Geometry.closestTo(coordinate: Coordinate, gf: GeometryFactory = GeometryFactory()) : Coordinate {
+fun Geometry.closestTo(coordinate: Coordinate, gf: GeometryFactory = GeometryFactory()): Coordinate {
     if (isEmpty)
         return Coordinate(1e20, 1e20)
     return DistanceOp.nearestPoints(this, gf.createPoint(coordinate))[0]
 }
 
-fun Geometry.distanceToClosest(coordinate: Coordinate, gf: GeometryFactory = GeometryFactory()) : Double {
+fun Geometry.distanceToClosest(coordinate: Coordinate, gf: GeometryFactory = GeometryFactory()): Double {
     if (isEmpty)
         return 1e20 * sqrt(2.0)
     return DistanceOp.distance(this, gf.createPoint(coordinate))

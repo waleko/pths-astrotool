@@ -1,13 +1,12 @@
 package me.alexkovrigin.astrotool.viewer
 
 import javafx.scene.paint.Color
-import org.locationtech.jts.geom.Coordinate
-import org.locationtech.jts.geom.Geometry
-import org.locationtech.jts.geom.GeometryFactory
-import org.locationtech.jts.geom.LineString
 import me.alexkovrigin.astrotool.isolines.IIsoline
 import me.alexkovrigin.astrotool.isolines.IsolineContainer
 import me.alexkovrigin.astrotool.utils.Constants
+import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.geom.GeometryFactory
+import org.locationtech.jts.geom.LineString
 import java.util.*
 
 class Drawer(var gf: GeometryFactory) {
@@ -41,7 +40,7 @@ class Drawer(var gf: GeometryFactory) {
                 else -> Color.GRAY
             }
 
-            val width = Constants.DRAWING_LINE_WIDTH * (if(isGpxTrack) 2 else 1)
+            val width = Constants.DRAWING_LINE_WIDTH * (if (isGpxTrack) 2 else 1)
 
             geom.add(GeometryWrapper(ls, col, /*line.type * */width))
             geom.add(GeometryWrapper(gf.createPoint(ls.getCoordinateN(0)), col, width))
@@ -65,7 +64,8 @@ class Drawer(var gf: GeometryFactory) {
         val geom = ArrayList<GeometryWrapper>()
         val ls = line.lineString
         geom.add(
-            GeometryWrapper(ls, color, line.type / 100000 * Constants.DRAWING_LINE_WIDTH * width
+            GeometryWrapper(
+                ls, color, line.type / 100000 * Constants.DRAWING_LINE_WIDTH * width
             )
         )
         val d = (line.type / 100000).toDouble() * Constants.DRAWING_POINT_WIDTH

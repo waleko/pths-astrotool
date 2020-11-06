@@ -11,14 +11,14 @@ class Viewer : Application() {
 
     override fun start(primaryStage: Stage) {
         stage = primaryStage
-        with (stage) {
+        with(stage) {
             val root = FXMLLoader().load<Parent>(javaClass.getResourceAsStream("/fxml/mainWindow.fxml"))
             scene = Scene(root).apply {
                 stylesheets.add(javaClass.getResource("/fxml/mainWindow.css").toExternalForm())
             }
             minHeight = 200.0
             minWidth = 200.0
-            title = "Viewer"
+            title = "Astrotool"
             show()
         }
     }

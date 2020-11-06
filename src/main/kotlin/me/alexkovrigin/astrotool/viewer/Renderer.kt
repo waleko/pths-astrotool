@@ -103,12 +103,23 @@ class Renderer {
         scale = max(bbox.width, bbox.height)
     }
 
-    private fun render(geoWrappers: List<GeometryWrapper>, graphicsContext: GraphicsContext,
-                       canvasWidth: Double, canvasHeight: Double) {
+    private fun render(
+        geoWrappers: List<GeometryWrapper>, graphicsContext: GraphicsContext,
+        canvasWidth: Double, canvasHeight: Double
+    ) {
         val correctionScale = min(canvasWidth, canvasHeight)
         val correctionShift = Coordinate(canvasWidth * 0.5, canvasHeight * 0.5)
         for (wrapper in geoWrappers) {
-            wrapper.image?.let { renderImage(it, graphicsContext, wrapper.geometry.envelopeInternal, correctionShift, correctionScale, canvasHeight) }
+            wrapper.image?.let {
+                renderImage(
+                    it,
+                    graphicsContext,
+                    wrapper.geometry.envelopeInternal,
+                    correctionShift,
+                    correctionScale,
+                    canvasHeight
+                )
+            }
             val geometry = wrapper.geometry
             val width = wrapper.width
             val color = wrapper.color
@@ -116,8 +127,10 @@ class Renderer {
         }
     }
 
-    private fun renderImage(image: Image, graphicsContext: GraphicsContext, envelope: Envelope,
-                            correctionShift: Coordinate, correctionScale: Double, canvasHeight: Double) {
+    private fun renderImage(
+        image: Image, graphicsContext: GraphicsContext, envelope: Envelope,
+        correctionShift: Coordinate, correctionScale: Double, canvasHeight: Double
+    ) {
         val pos1 = envelope.run { Coordinate(minX, minY) }
         val pos3 = envelope.run { Coordinate(maxX, maxY) }
         val pos2 = envelope.run { Coordinate(minX, maxY) }
@@ -128,8 +141,10 @@ class Renderer {
         graphicsContext.drawImage(newImage, pos2.x, canvasHeight - pos2.y)
     }
 
-    private fun renderGeometry(geometry: Geometry, graphicsContext: GraphicsContext, width: Double, color: Color,
-                               correctionShift: Coordinate, correctionScale: Double, canvasHeight: Double) {
+    private fun renderGeometry(
+        geometry: Geometry, graphicsContext: GraphicsContext, width: Double, color: Color,
+        correctionShift: Coordinate, correctionScale: Double, canvasHeight: Double
+    ) {
         graphicsContext.lineWidth = width
         graphicsContext.stroke = color
         val string: LineString = when (geometry) {

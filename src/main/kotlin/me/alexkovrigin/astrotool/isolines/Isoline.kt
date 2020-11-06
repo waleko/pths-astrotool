@@ -1,7 +1,7 @@
 package me.alexkovrigin.astrotool.isolines
 
-import org.locationtech.jts.geom.*
 import me.alexkovrigin.astrotool.utils.DebugUtils
+import org.locationtech.jts.geom.*
 import java.io.Serializable
 
 class Isoline : IIsoline, Serializable {
@@ -45,7 +45,7 @@ class Isoline : IIsoline, Serializable {
         val p1: Coordinate = lineString.getCoordinateN(0)
         val p2: Coordinate = lineString.getCoordinateN(lineString.numPoints - 1)
         return (31 * java.lang.Double.hashCode(p1.x) - 51 * java.lang.Double.hashCode(p1.y) +
-               (31 * java.lang.Double.hashCode(p2.x) - 51 * java.lang.Double.hashCode(p2.y))) +
+                (31 * java.lang.Double.hashCode(p2.x) - 51 * java.lang.Double.hashCode(p2.y))) +
                 129 * type
 
     }

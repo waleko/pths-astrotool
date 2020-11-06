@@ -24,7 +24,7 @@ class IsolineContainer : HashSet<IIsoline> {
 
     constructor(gf: GeometryFactory, isolines: Collection<IIsoline>) : super(isolines.size) {
         factory = gf
-        isolines.forEach{ e: IIsoline -> add(e) }
+        isolines.forEach { e: IIsoline -> add(e) }
     }
 
     constructor(gf: GeometryFactory) : super() {
@@ -42,7 +42,7 @@ class IsolineContainer : HashSet<IIsoline> {
     val envelope: Envelope
         get() {
             val envelope = Envelope()
-            this@IsolineContainer.forEach{
+            this@IsolineContainer.forEach {
                 envelope.expandToInclude(it.geometry.envelopeInternal)
             }
             return envelope
@@ -133,7 +133,7 @@ class IsolineContainer : HashSet<IIsoline> {
 
     }
 
-    private class IsolineAdapter internal constructor(var gf: GeometryFactory) : JsonDeserializer<Isoline> {
+    private class IsolineAdapter(var gf: GeometryFactory) : JsonDeserializer<Isoline> {
         @Throws(JsonParseException::class)
         override fun deserialize(
             json: JsonElement,
@@ -159,7 +159,7 @@ class IsolineContainer : HashSet<IIsoline> {
 
     }
 
-    private class IsolineContainerAdapter internal constructor(var gf: GeometryFactory) :
+    private class IsolineContainerAdapter(var gf: GeometryFactory) :
         JsonDeserializer<IsolineContainer> {
         @Throws(JsonParseException::class)
         override fun deserialize(

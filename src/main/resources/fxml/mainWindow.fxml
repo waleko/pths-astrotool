@@ -27,6 +27,7 @@
                 <MenuItem mnemonicParsing="false" onAction="#chooseOutputfile" text="Select output file..." />
                 <MenuItem mnemonicParsing="false" onAction="#openSinglePicture" text="Open Single picture..." />
                 <MenuItem mnemonicParsing="false" onAction="#openFolder" text="Open Folder with pictures..." />
+                <MenuItem mnemonicParsing="false" onAction="#openCSVPodgon" text="Use Podgon™ mode for image..." />
                 <SeparatorMenuItem />
                 <MenuItem mnemonicParsing="false" onAction="#exitAction" text="Exit" />
             </Menu>
