@@ -1,5 +1,6 @@
 package me.alexkovrigin.astrotool.viewer
 
+import com.google.gson.Gson
 import javafx.application.Platform
 import javafx.beans.InvalidationListener
 import javafx.concurrent.Task
@@ -9,7 +10,6 @@ import javafx.fxml.Initializable
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressBar
-import javafx.scene.image.Image
 import javafx.scene.input.MouseEvent
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.AnchorPane
@@ -18,10 +18,14 @@ import javafx.scene.paint.Color
 import javafx.scene.text.Text
 import javafx.stage.FileChooser
 import me.alexkovrigin.astrotool.isolines.IsolineContainer
+import me.alexkovrigin.astrotool.utils.AstronomyUtils
+import me.alexkovrigin.astrotool.utils.CameraParameters
 import org.locationtech.jts.geom.*
 import org.locationtech.jts.util.GeometricShapeFactory
 import java.io.*
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.*
 import kotlin.math.pow
 
@@ -34,6 +38,9 @@ class Controller : Initializable {
     private var drawer = Drawer(gf)
     private var mousePosition = Coordinate(0.0, 0.0)
     private var lastOpenedDir: File = File(".")
+    private val geometryWrappers = mutableListOf<GeometryWrapper>()
+    private var envelope: Envelope = Envelope(Coordinate(0.0, 0.0))
+    private val imagesQueue: Queue<File> = LinkedList<File>()
 
     @FXML
     lateinit var gridPane: GridPane
@@ -54,7 +61,7 @@ class Controller : Initializable {
     lateinit var infoLabel: Label
 
     private fun redraw() {
-        val geometry: List<GeometryWrapper> = drawer.draw(lines)
+        val geometry: List<GeometryWrapper> = drawer.draw(lines) + geometryWrappers
         renderer.clear()
         renderer.addAll(geometry)
         border?.let {
@@ -67,29 +74,59 @@ class Controller : Initializable {
         renderer.render(gc, display.width, display.height)
     }
 
-    fun openOcadAction(actionEvent: ActionEvent) {
+    private var awaitingInput = false
+
+    private fun displayNextInQueue() {
+        if (awaitingInput)
+            return
+        geometryWrappers.clear()
+        if (imagesQueue.isNotEmpty()) {
+            awaitingInput = true
+            geometryWrappers.add(imagesQueue.poll().toWrapper(Coordinate(0.0, 0.0)).also {
+                envelope = it.geometry.envelopeInternal
+            })
+        }
+        redraw()
+        renderer.fit()
+        render()
+    }
+
+    private fun processImage(imageFile: File) {
+        try {
+            imagesQueue.add(imageFile)
+            displayNextInQueue()
+        } catch (e: FileNotFoundException) {
+            statusText.text = "File not found"
+        } catch (e: Exception) {
+            statusText.text = "File load error: " + e.message
+            println(e)
+        }
+    }
+
+    fun openSinglePicture(actionEvent: ActionEvent) {
         val fileChooser = FileChooser()
-        fileChooser.title = "Open ocad map"
+        fileChooser.title = "Open image"
         fileChooser.initialDirectory = lastOpenedDir
-        val ocadFile = fileChooser.showOpenDialog(null)
-        if (ocadFile != null) {
-            lastOpenedDir = ocadFile.parentFile
-            try {
-                progressBar.progress = 0.0
-                lines = IsolineContainer(gf)
-                // TODO load picture
-                renderer.add(Image(ocadFile.toURL().toString()).toWrapper(Coordinate(0.0, 0.0)))
-                val envelope = lines.envelope
-                statusText.text = "Added ${lines.size} isolines. Bounding box: minX=${envelope.minX}, minY=${envelope.minY}, maxX=${envelope.maxX}, maxY=${envelope.maxY}"
-//                redraw()
-                renderer.fit()
-                render()
-            } catch (e: FileNotFoundException) {
-                statusText.text = "File not found"
-            } catch (e: Exception) {
-                statusText.text = "File load error: " + e.message
-                println(e)
-            }
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png"))
+        val imageFile = fileChooser.showOpenDialog(null)
+        if (imageFile != null) {
+            imagesQueue.clear()
+            awaitingInput = false
+            lastOpenedDir = imageFile.parentFile
+            processImage(imageFile)
+        }
+    }
+
+    fun openFolder(actionEvent: ActionEvent) {
+        val multiFileChooser = FileChooser()
+        multiFileChooser.title = "Select input folder"
+        multiFileChooser.initialDirectory = lastOpenedDir
+        multiFileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Images", "*.jpg", "*.jpeg", "*.png"))
+        val selection = multiFileChooser.showOpenMultipleDialog(null)
+        if (selection != null && selection.isNotEmpty()) {
+            imagesQueue.clear()
+            awaitingInput = false
+            selection.sortedBy { it.lastModified() }.forEach { processImage(imageFile = it) }
         }
     }
 
@@ -112,12 +149,10 @@ class Controller : Initializable {
         renderer.screenToLocal(position, display.width, display.height)
         infoLabel.text = "(${mouseEvent.x.toInt()}, ${mouseEvent.y.toInt()}) - (${position.x}, ${position.y})"
 
-        if (lines.envelope.intersects(position)) {
-            val td = 15.0
-            infoLabel.text += "; closest is (${position.x}, ${position.y})"
-
+        if (envelope.intersects(position)) {
+            val radius = 10.0
             redraw()
-            renderer.add(GeometryWrapper(createCircle(position, td), Color.RED, 1.0))
+            renderer.add(GeometryWrapper(createCircle(position, radius), Color.RED, 1.0))
             render()
         }
     }
@@ -146,6 +181,23 @@ class Controller : Initializable {
 
     fun canvasMouseUp(mouseEvent: MouseEvent) {
         // TODO
+        if (!awaitingInput)
+            return
+        awaitingInput = false
+
+        val position = mousePosition.copy()
+        val gw = geometryWrappers.first()
+        cameraParameters?.let {
+            val star = AstronomyUtils.mouseToStarCoordinate(
+                position,
+                gw,
+                it
+            )
+            val lastModified = gw.imageFile?.lastModified() ?: error("No file")
+            val lastModifiedString = Instant.ofEpochMilli(lastModified).toString()
+            outputFile.appendText("$lastModifiedString;${star.azimuth};${star.height}\n")
+        }
+        displayNextInQueue()
     }
 
     abstract inner class BackgroundTask(private val taskName: String) : Task<String?>() {
@@ -195,5 +247,29 @@ class Controller : Initializable {
         display.heightProperty().bind(displayAnchorPane.heightProperty())
         display.widthProperty().addListener(listener)
         display.heightProperty().addListener(listener)
+    }
+
+    private var outputFile = File(System.getProperty("user.home"))
+        .resolve("astrotool_${SimpleDateFormat("dd-MM-yyyy_HH-mm-ss").format(Date())}.csv")
+
+    fun chooseOutputfile(actionEvent: ActionEvent) {
+        val fileChooser = FileChooser()
+        fileChooser.title = "Select output file location"
+        fileChooser.initialDirectory = lastOpenedDir
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("CSV", "*.csv"))
+        outputFile = fileChooser.showSaveDialog(null) ?: return
+    }
+
+    var cameraParameters: CameraParameters? = null
+
+    fun chooseCameraFile(actionEvent: ActionEvent) {
+        val fileChooser = FileChooser()
+        fileChooser.title = "Select camera model file"
+        fileChooser.initialDirectory = lastOpenedDir
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Camera model JSON file", "*.json"))
+        val file = fileChooser.showOpenDialog(null)
+        if (file != null) {
+            cameraParameters = Gson().fromJson(file.readText(), CameraParameters::class.java)
+        }
     }
 }

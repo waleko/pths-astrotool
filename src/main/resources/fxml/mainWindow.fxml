@@ -23,7 +23,10 @@
 
         <MenuBar GridPane.rowIndex="0">
             <Menu mnemonicParsing="false" text="File">
-                <MenuItem mnemonicParsing="false" onAction="#openOcadAction" text="Open OCAD..." />
+                <MenuItem mnemonicParsing="false" onAction="#chooseCameraFile" text="Select camera model file..." />
+                <MenuItem mnemonicParsing="false" onAction="#chooseOutputfile" text="Select output file..." />
+                <MenuItem mnemonicParsing="false" onAction="#openSinglePicture" text="Open Single picture..." />
+                <MenuItem mnemonicParsing="false" onAction="#openFolder" text="Open Folder with pictures..." />
                 <SeparatorMenuItem />
                 <MenuItem mnemonicParsing="false" onAction="#exitAction" text="Exit" />
             </Menu>
