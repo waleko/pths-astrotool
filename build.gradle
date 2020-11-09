@@ -19,7 +19,7 @@ apply plugin: 'com.github.johnrengelman.shadow'
 
 group 'me.alexkovrigin.astrotool'
 version '1.0-SNAPSHOT'
-mainClassName = "me.alexkovrigin.ViewerKt"
+mainClassName = "me.alexkovrigin.astrotool.ViewerKt"
 
 repositories {
     maven { url 'https://kotlin.bintray.com/kotlinx' }

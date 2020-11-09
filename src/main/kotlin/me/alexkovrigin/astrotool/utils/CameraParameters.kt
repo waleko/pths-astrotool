@@ -42,6 +42,8 @@ data class CameraParameters(
         heights.keys.max()!!.toDouble()
     )
 
+    // TODO: linear via only closest
+
     fun isValidImage(image: Image): Boolean {
         return image.width == imageWidth && image.height == imageHeight
     }
