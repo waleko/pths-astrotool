@@ -1,0 +1,58 @@
+.button {
+    -fx-background-color: transparent;
+    -fx-padding: 0px;
+}
+
+.button:hover {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-background-radius: 3px, 3px, 2px, 1px;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
+    -fx-text-fill: -fx-text-base-color;
+    -fx-alignment: CENTER;
+    -fx-content-display: LEFT;
+}
+
+.tool-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 0px;
+    -fx-spacing: 0px;
+}
+
+.menu-bar {
+    -fx-background-color: #545454;
+    -fx-padding: 0;
+}
+
+.menu .label {
+    -fx-text-fill: #d2d2d2;
+}
+
+.menu:hover {
+    -fx-background-color: #0068e1;
+}
+
+.menu:showing {
+    -fx-background-color: #0068e1;
+}
+
+.menu .label:hover {
+    -fx-text-fill: white;
+}
+
+.menu-item {
+    -fx-background-color: #545454;
+}
+
+.menu-item:focused {
+    -fx-background-color: #0068e1;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: white;
+}
+
+.menu .context-menu {
+    -fx-background-color: #545454;
+    -fx-padding: 0px;
+}
