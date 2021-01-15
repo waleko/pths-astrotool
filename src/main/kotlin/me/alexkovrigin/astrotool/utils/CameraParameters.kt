@@ -10,39 +10,14 @@ data class CameraParameters(
     val heights: Map<Int, Double>
 ) {
 
-    private val x_az
-        get() = linearTransform(
-        azimuths.keys.min()!!.toDouble(),
-        azimuths.keys.max()!!.toDouble(),
-        azimuths.values.min()!!.toDouble(),
-        azimuths.values.max()!!.toDouble()
-    )
-
-    private val az_x
-        get() = linearTransform(
-        azimuths.values.min()!!.toDouble(),
-        azimuths.values.max()!!.toDouble(),
-        azimuths.keys.min()!!.toDouble(),
-        azimuths.keys.max()!!.toDouble()
-    )
-
-    private val y_he
-        get() = linearTransform(
-        heights.keys.min()!!.toDouble(),
-        heights.keys.max()!!.toDouble(),
-        heights.values.min()!!.toDouble(),
-        heights.values.max()!!.toDouble()
-    )
-
-    private val he_y         
-        get() = linearTransform(
-        heights.values.min()!!.toDouble(),
-        heights.values.max()!!.toDouble(),
-        heights.keys.min()!!.toDouble(),
-        heights.keys.max()!!.toDouble()
-    )
-
-    // TODO: linear via only closest
+    private val azk: List<Int>
+        get() = azimuths.toSortedMap().keys.toList()
+    private val azv: List<Double>
+        get() = azimuths.toSortedMap().values.toList().map { it + 176.9 - 28.168 }
+    private val hsk: List<Int>
+        get() = heights.toSortedMap().keys.toList().map { it + 20 }
+    private val hsv: List<Double>
+        get() = heights.toSortedMap().values.toList()
 
     fun isValidImage(image: Image): Boolean {
         return image.width == imageWidth && image.height == imageHeight
@@ -53,12 +28,29 @@ data class CameraParameters(
             throw AssertionError("Incorrect image size (expected: ${imageWidth}x${imageHeight}, got ${image.width}x${image.height}")
     }
 
+    private fun getXToAzimuth(x: Double): Pair<Double, Double> {
+        val p = getNearestTwoIndexes(azk, x.toInt())
+        return linearTransform(azk, azv, p)
+    }
+    private fun getAzToX(x: Double): Pair<Double, Double> {
+        val p = getNearestTwoIndexes(azv, x)
+        return linearTransform(azv, azk, p)
+    }
+    private fun getYToHeight(y: Double): Pair<Double, Double> {
+        val p = getNearestTwoIndexes(hsk, y.toInt())
+        return linearTransform(hsk, hsv, p)
+    }
+    private fun getHeightToY(y: Double): Pair<Double, Double> {
+        val p = getNearestTwoIndexes(hsv, y)
+        return linearTransform(hsv, hsk, p)
+    }
+
     fun getStarCoordinate(coordinate: Coordinate): StarCoordinate {
-        return StarCoordinate(linearValue(coordinate.x, x_az), linearValue(coordinate.y, y_he))
+        return StarCoordinate(linearValue(coordinate.x, getXToAzimuth(coordinate.x)), linearValue(coordinate.y, getYToHeight(coordinate.y)))
     }
 
     fun getCoordinate(starCoordinate: StarCoordinate): Coordinate {
-        return Coordinate(linearValue(starCoordinate.azimuth, az_x), linearValue(starCoordinate.height, he_y))
+        return Coordinate(linearValue(starCoordinate.azimuth, getAzToX(starCoordinate.azimuth)), linearValue(starCoordinate.height, getHeightToY(starCoordinate.height)))
     }
 
     companion object {
@@ -68,6 +60,24 @@ data class CameraParameters(
             return k to b
         }
 
+        private fun linearTransform(a: List<Number>, b: List<Number>, pair: Pair<Int, Int>)
+            = linearTransform(
+            a[pair.first].toDouble(),
+            a[pair.second].toDouble(),
+            b[pair.first].toDouble(),
+            b[pair.second].toDouble()
+        )
+
         private fun linearValue(x: Double, params: Pair<Double, Double>) = x * params.first + params.second
+
+        private fun <T: Comparable<T>> getNearestTwoIndexes(list: Collection<T>, value: T): Pair<Int, Int> {
+            require(list.size >= 2)
+            var idx = list.toList().indexOfLast {it <= value} // FIXME: troubles with zero
+            if (idx == -1)
+                idx = 0
+            if (idx == list.size - 1)
+                idx--
+            return idx to idx + 1
+        }
     }
 }

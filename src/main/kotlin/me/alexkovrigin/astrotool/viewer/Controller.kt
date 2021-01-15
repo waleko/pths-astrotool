@@ -193,7 +193,8 @@ class Controller : Initializable {
             return
         awaitingInput = false
 
-        val position = mousePosition.copy()
+        val position = Coordinate(mousePosition)
+        renderer.screenToLocal(position, display.width, display.height)
         val gw = geometryWrappers.first()
         cameraParameters?.let {
             val star = AstronomyUtils.mouseToStarCoordinate(
@@ -291,24 +292,21 @@ class Controller : Initializable {
             .readText()
             .split('\n')
             .map { it.split(';') }
-            .filter { line -> line.size == 3 && line.all { it.isNotBlank() } }
+            .filter { line -> line.size == 2 && line.all { it.isNotBlank() } }
             .map {
-                val date = Instant.parse(it[0]).toEpochMilli()
-                val star = StarCoordinate(it[1].toDouble(), it[2].toDouble())
-                return@map date to star
+//                val date = Instant.parse(it[0]).toEpochMilli()
+                val star = StarCoordinate(it[0].toDouble(), it[1].toDouble())
+                return@map star
             }
-            .sortedBy { it.first }
 
         val cnt = coords.size
         geometryWrappers1.clear()
-        val minDate = coords.first().first
-        val maxDate = coords.last().first
-        coords.forEach { (date, star) ->
+        coords.forEachIndexed { i, star ->
             val coordinate = AstronomyUtils.starCoordinateToMouse(
                 star, geometryWrappers.first(), cameraParameters ?: error("No camera parameters")
             )
-            val circle = createCircle(coordinate, radius = 30.0)
-            val color = Color.hsb(360.0 * (date - minDate) / (maxDate - minDate), 1.0, 1.0)
+            val circle = createCircle(coordinate, radius = 10.0)
+            val color = Color.hsb(360.0 * i / cnt, 1.0, 1.0)
             val gw = GeometryWrapper(circle, color, 2.0)
             geometryWrappers1.add(gw)
         }
